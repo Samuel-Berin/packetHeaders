@@ -21,12 +21,26 @@ UDP_IP = IP_PORT[0:IP_PORT.find(":")]
 UDP_PORT = int(IP_PORT[IP_PORT.find(":")+1:])
 dest = (UDP_IP, UDP_PORT)
 
+# A list of all of the packets that we have sent but have no acks for yet
+outBox = []
+
+# The number of packets that can be sent un-acked
+windowSize = 3
+
 # Set up the socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.settimeout(TIMEOUT)
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
+
+
+# Sends the given message to the given destination
+def send_msg_to_dest(msg, dest):
+    if sock.sendto(msg, dest) < len(msg):
+        log("[error] unable to fully send packet")
+    else:
+        log("[send data] " + str(SEQUENCE) + " (" + str(len(data)) + ")")
 
 def send_next_packet():
   global SEQUENCE
@@ -36,10 +50,10 @@ def send_next_packet():
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
-    if sock.sendto(msg, dest) < len(msg):
-      log("[error] unable to fully send packet")
-    else:
-      log("[send data] " + str(SEQUENCE) + " (" + str(len(data)) + ")")
+    outBox.append(msg)
+
+    send_msg_to_dest(msg, dest)
+
     return True
   else:
     return False
@@ -57,13 +71,25 @@ while True:
     try:
       decoded = json.loads(data)
 
-      # If there is an ack, send next packet
-      if decoded['ack'] == SEQUENCE:
-        log("[recv ack] " + str(SEQUENCE))
+      # If there is an ack for the beginning of the outBox, send next packet
+      lastSeqNum = json.loads(outbox[0])["sequence"]
+      if decoded['ack'] == lastSeqNum:
+        log("[recv ack] " + str(lastSeqNum))
+        outBox.pop(0)
 
         # Try to send next packet; break if no more data
         if (not send_next_packet()):
           break
+
+      # If there is an ack with a different sequence number
+      else:
+          log("[recv ack] " + str(decoded['ack']))
+
+          # Send the whole outBox back to receiver
+          for msg in outBox:
+              send_msg_to_dest(msg, dest)
+
+
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")
   else:

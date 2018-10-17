@@ -72,7 +72,7 @@ while True:
       decoded = json.loads(data)
 
       # If there is an ack for the beginning of the outBox, send next packet
-      lastSeqNum = json.loads(outbox[0])["sequence"]
+      lastSeqNum = json.loads(outbox[0])['sequence']
       if decoded['ack'] == lastSeqNum:
         log("[recv ack] " + str(lastSeqNum))
         outBox.pop(0)

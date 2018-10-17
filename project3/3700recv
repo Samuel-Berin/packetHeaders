@@ -54,6 +54,9 @@ while True:
         # You will need to do much more here
 
         # Only Accept the packet if the sequence numbers make sense
+        print SEQUENCE
+        print len(decoded['data'])
+        print decoded['sequence']
         if (SEQUENCE + len(decoded['data'])) == decoded['sequence']:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
             SEQUENCE = decoded['sequence']

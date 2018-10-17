@@ -52,6 +52,10 @@ def send_next_packet():
 
     outBox.append(msg)
 
+    print len(outBox)
+    print "\n"
+    print msg
+
     send_msg_to_dest(msg, dest)
 
     return True
@@ -73,6 +77,7 @@ while True:
 
       # If there is an ack for the beginning of the outBox, send next packet
       lastSeqNum = json.loads(outbox[0])['sequence']
+      print lastSeqNum
       if decoded['ack'] == lastSeqNum:
         log("[recv ack] " + str(lastSeqNum))
         outBox.pop(0)

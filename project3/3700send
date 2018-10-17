@@ -36,11 +36,11 @@ def log(string):
 
 
 # Sends the given message to the given destination
-def send_msg_to_dest(msg, dest):
+def send_msg_to_dest(msg, dest, datalen):
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
     else:
-        log("[send data] " + str(SEQUENCE) + " (" + str(len(data)) + ")")
+        log("[send data] " + str(SEQUENCE) + " (" + str(datalen) + ")")
 
 def send_next_packet():
   global SEQUENCE
@@ -56,7 +56,7 @@ def send_next_packet():
     print "\n"
     print msg
 
-    send_msg_to_dest(msg, dest)
+    send_msg_to_dest(msg, dest, len(data))
 
     return True
   else:

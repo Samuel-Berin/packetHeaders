@@ -63,7 +63,7 @@ while True:
             sys.stdout.write(decoded['data'])
 
       # Send back an ack to the sender
-      msg = json.dumps({"ack": SEQUENCE] + len(decoded['data'])})
+      msg = json.dumps({"ack": SEQUENCE + len(decoded['data'])})
       log("ABOUT TO SEND " + msg)
       if sock.sendto(msg, addr) < len(msg):
         log("[error] unable to fully send packet")

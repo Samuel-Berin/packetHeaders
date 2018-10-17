@@ -57,7 +57,7 @@ while True:
         print SEQUENCE
         print len(decoded['data'])
         print decoded['sequence']
-        seqMatch = SEQUENCE + len(decoded['data'])) == decoded['sequence']
+        seqMatch = SEQUENCE + len(decoded['data']) == decoded['sequence']
         if (True):
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
             SEQUENCE = decoded['sequence']

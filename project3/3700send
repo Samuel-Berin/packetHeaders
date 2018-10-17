@@ -76,7 +76,7 @@ while True:
       decoded = json.loads(data)
 
       # If there is an ack for the beginning of the outBox, send next packet
-      lastSeqNum = json.loads(outbox[0])['sequence']
+      lastSeqNum = json.loads(outBox[0])['sequence']
       print lastSeqNum
       if decoded['ack'] == lastSeqNum:
         log("[recv ack] " + str(lastSeqNum))
@@ -93,9 +93,7 @@ while True:
           # Send the whole outBox back to receiver
           for msg in outBox:
               msgJson = json.loads(msg)
-
-              send_msg_to_dest(msg, dest, len(msgJson['data'])
-
+              send_msg_to_dest(msg, dest, len(msgJson['data']))
 
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")

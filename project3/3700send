@@ -92,7 +92,9 @@ while True:
 
           # Send the whole outBox back to receiver
           for msg in outBox:
-              send_msg_to_dest(msg, dest)
+              msgJson = json.loads(msg)
+
+              send_msg_to_dest(msg, dest, len(msgJson['data'])
 
 
     except (ValueError, KeyError, TypeError):

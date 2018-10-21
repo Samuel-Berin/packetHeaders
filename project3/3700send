@@ -72,9 +72,10 @@ while True:
       decoded = json.loads(data)
 
       # The sequence number for the oldest message in the outbox
-      outboxStartingSeqNum = json.loads(outbox[0])['sequence']
+      oldestMessage = json.loads(outbox[0])
+      outboxStartingSeqNum = oldestMessage['sequence']
       if decoded['ack'] == outboxStartingSeqNum:
-        log("[recv ack] " + str(SEQUENCE))
+        log("[recv ack] " + str(decoded['ack']))
         outbox.pop(0)
 
         # Try to send next packet; break if no more data

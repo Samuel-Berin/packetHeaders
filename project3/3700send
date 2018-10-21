@@ -35,13 +35,14 @@ def log(string):
 
 # Sends the given message to the given destination
 def send_msg_to_dest(msg, dest):
-    msgJson = json.loads(msg)
-    seqNum = msgJson['sequence']
-    datalen = len(msgJson['data'])
-    if sock.sendto(msg, dest) < len(msg):
-        log("[error] unable to fully send packet")
-    else:
-        log("[send data] " + str(seqNum) + " (" + str(datalen) + ")")
+  outbox.append(msg)
+  msgJson = json.loads(msg)
+  seqNum = msgJson['sequence']
+  datalen = len(msgJson['data'])
+  if sock.sendto(msg, dest) < len(msg):
+    log("[error] unable to fully send packet")
+  else:
+    log("[send data] " + str(seqNum) + " (" + str(datalen) + ")")
 
 def send_next_packet():
   global SEQUENCE
@@ -51,9 +52,13 @@ def send_next_packet():
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
-    outbox.append(msg)
+    
     send_msg_to_dest(msg, dest)
 
+    return True
+  elif len(outbox) != 0:
+    for message in outbox:
+      send_msg_to_dest(message, dest)
     return True
   else:
     return False
@@ -77,6 +82,7 @@ while True:
       if decoded['ack'] == outboxStartingSeqNum:
         log("[recv ack] " + str(decoded['ack']))
         outbox.pop(0)
+        TIMEOUT = 30
 
         # Try to send next packet; break if no more data
         if (not send_next_packet()):
@@ -84,17 +90,20 @@ while True:
 
       # If there is an ack with a different sequence number
       else:
-          log("[recv ack] " + str(decoded['ack']))
+        log("[recv ack] " + str(decoded['ack']))
 
-          for message in outbox:
-              send_msg_to_dest(message, dest)
+        for message in outbox:
+          send_msg_to_dest(message, dest)
 
 
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")
   else:
     log("[error] timeout")
-    sys.exit(-1)
+    TIMEOUT = TIMEOUT * 2
+    for message in outbox:
+      send_msg_to_dest(message, dest)
+    
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False}), dest)
 sys.exit(0)

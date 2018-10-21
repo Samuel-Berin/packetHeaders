@@ -73,4 +73,9 @@ while True:
       raise e
   else:
     log("[error] timeout")
-    sys.exit(-1)
+    TIMEOUT = TIMEOUT * 2
+
+
+
+
+    

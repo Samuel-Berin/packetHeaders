@@ -52,9 +52,9 @@ while True:
         # You will need to do much more here
 
         # Check for order
-        if decoded['sequence'] == SEQUENCE + decoded['data']:
+        if decoded['sequence'] == SEQUENCE:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
-            SEQUENCE = decoded['sequence']
+            SEQUENCE += len(decoded['data'])
             sys.stdout.write(decoded['data'])
 
       # Send back an ack to the sender

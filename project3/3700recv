@@ -19,6 +19,7 @@ TIMEOUT = 30
 # Bind to localhost and an ephemeral port
 UDP_IP = "127.0.0.1"
 UDP_PORT = 0
+SEQUENCE = 0
 
 # The last sequence number seen
 SEQUENCE = 0
@@ -53,11 +54,10 @@ while True:
         # If we receive data, we assume it's in-order
         # You will need to do much more here
 
-        # Only Accept the packet if the sequence numbers make sense
-        seqMatch = SEQUENCE + len(decoded['data']) == decoded['sequence']
-        if seqMatch:
+        # Check for order
+        if decoded['sequence'] == SEQUENCE:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
-            SEQUENCE = decoded['sequence']
+            SEQUENCE += len(decoded['data'])
             sys.stdout.write(decoded['data'])
 
       # Send back an ack to the sender

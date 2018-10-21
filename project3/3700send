@@ -21,6 +21,9 @@ UDP_IP = IP_PORT[0:IP_PORT.find(":")]
 UDP_PORT = int(IP_PORT[IP_PORT.find(":")+1:])
 dest = (UDP_IP, UDP_PORT)
 
+#Outbox for unacked messages
+outbox = []
+
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,11 +34,14 @@ def log(string):
 
 
 # Sends the given message to the given destination
-def send_msg_to_dest(msg, dest, datalen):
+def send_msg_to_dest(msg, dest):
+    msgJson = json.loads(msg)
+    seqNum = msgJson['sequence']
+    datalen = len(msgJson['data'])
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
     else:
-        log("[send data] " + str(SEQUENCE) + " (" + str(datalen) + ")")
+        log("[send data] " + str(seqNum) + " (" + str(datalen) + ")")
 
 def send_next_packet():
   global SEQUENCE
@@ -45,7 +51,8 @@ def send_next_packet():
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
-    send_msg_to_dest(msg, dest, len(data))
+    outbox.append(msg)
+    send_msg_to_dest(msg, dest)
 
     return True
   else:
@@ -64,8 +71,11 @@ while True:
     try:
       decoded = json.loads(data)
 
-      if decoded['ack'] == SEQUENCE:
+      # The sequence number for the oldest message in the outbox
+      outboxStartingSeqNum = json.loads(outbox[0])['sequence']
+      if decoded['ack'] == outboxStartingSeqNum:
         log("[recv ack] " + str(SEQUENCE))
+        outbox.pop(0)
 
         # Try to send next packet; break if no more data
         if (not send_next_packet()):

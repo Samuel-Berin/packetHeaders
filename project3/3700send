@@ -21,11 +21,6 @@ UDP_IP = IP_PORT[0:IP_PORT.find(":")]
 UDP_PORT = int(IP_PORT[IP_PORT.find(":")+1:])
 dest = (UDP_IP, UDP_PORT)
 
-# A list of all of the packets that we have sent but have no acks for yet
-outBox = []
-
-# The number of packets that can be sent un-acked
-windowSize = 3
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -50,12 +45,6 @@ def send_next_packet():
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
-    outBox.append(msg)
-
-    print len(outBox)
-    print "\n"
-    print msg
-
     send_msg_to_dest(msg, dest, len(data))
 
     return True
@@ -75,12 +64,8 @@ while True:
     try:
       decoded = json.loads(data)
 
-      # If there is an ack for the beginning of the outBox, send next packet
-      lastSeqNum = json.loads(outBox[0])['sequence']
-      print lastSeqNum
-      if decoded['ack'] == lastSeqNum:
-        log("[recv ack] " + str(lastSeqNum))
-        outBox.pop(0)
+      if decoded['ack'] == SEQUENCE:
+        log("[recv ack] " + str(SEQUENCE))
 
         # Try to send next packet; break if no more data
         if (not send_next_packet()):
@@ -90,10 +75,6 @@ while True:
       else:
           log("[recv ack] " + str(decoded['ack']))
 
-          # Send the whole outBox back to receiver
-          for msg in outBox:
-              msgJson = json.loads(msg)
-              send_msg_to_dest(msg, dest, len(msgJson['data']))
 
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")

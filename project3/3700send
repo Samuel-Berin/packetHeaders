@@ -52,13 +52,9 @@ def send_next_packet():
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
-    
+
     send_msg_to_dest(msg, dest)
 
-    return True
-  elif len(outbox) != 0:
-    for message in outbox:
-      send_msg_to_dest(message, dest)
     return True
   else:
     return False
@@ -69,6 +65,11 @@ send_next_packet()
 # Now read in data, send packets
 while True:
   log("ABOUT TO SLEEP")
+
+  if (len(outbox) < 10):
+      if (not send_next_packet()):
+          break
+
   result = sock.recvfrom(MSG_SIZE)
 
   if result:
@@ -84,14 +85,10 @@ while True:
         outbox.pop(0)
         TIMEOUT = 30
 
-        # Try to send next packet; break if no more data
-        if (not send_next_packet()):
-          break
 
       # If there is an ack with a different sequence number
       else:
         log("[recv ack] " + str(decoded['ack']))
-
         for message in outbox:
           send_msg_to_dest(message, dest)
 
@@ -103,7 +100,7 @@ while True:
     TIMEOUT = TIMEOUT * 2
     for message in outbox:
       send_msg_to_dest(message, dest)
-    
+
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False}), dest)
 sys.exit(0)

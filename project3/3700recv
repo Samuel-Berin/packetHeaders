@@ -44,6 +44,11 @@ while True:
     try:
       decoded = json.loads(data)
 
+      if(decoded['syn']):
+          log("[syn recieved]")
+          msg = json.dumps({"syn":True})
+          sock.sendto(msg, dest)
+
       # If the EOF flag is set, exit
       if (decoded['eof']):
         log("[completed]")
@@ -74,8 +79,3 @@ while True:
   else:
     log("[error] timeout")
     TIMEOUT = TIMEOUT * 2
-
-
-
-
-    

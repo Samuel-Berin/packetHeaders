@@ -24,6 +24,9 @@ dest = (UDP_IP, UDP_PORT)
 #Outbox for unacked messages
 outbox = []
 
+rtt = -1
+synSentAt = 0
+
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -31,6 +34,14 @@ sock.settimeout(TIMEOUT)
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
+
+def send_syn():
+    msg = json.dumps{"syn": True}
+    if sock.sendto(msg, dest) < len(msg):
+        log("[error] unable to fully send packet")
+    else:
+        synSentAt = time.time()
+        log("[syn sent]"")
 
 
 # Sends the given message to the given destination
@@ -60,15 +71,12 @@ def send_next_packet():
     return False
 
 # Send first packet
-send_next_packet()
+send_syn()
 
 # Now read in data, send packets
 while True:
   log("ABOUT TO SLEEP")
 
-  if (len(outbox) < 10):
-      if (not send_next_packet()):
-          break
 
   result = sock.recvfrom(MSG_SIZE)
 
@@ -77,6 +85,10 @@ while True:
     try:
       decoded = json.loads(data)
 
+      if (decoded['syn']):
+          rtt = (time.time() - synSentAt)
+
+
       # The sequence number for the oldest message in the outbox
       oldestMessage = json.loads(outbox[0])
       outboxStartingSeqNum = oldestMessage['sequence']
@@ -84,6 +96,9 @@ while True:
         log("[recv ack] " + str(decoded['ack']))
         outbox.pop(0)
         TIMEOUT = 30
+
+        if (not send_next_packet())
+            break
 
 
       # If there is an ack with a different sequence number

@@ -117,7 +117,7 @@ while True:
           inARow = inARow + 1
           WINDOW_SIZE = WINDOW_SIZE + inARow
           log("[recv ack] " + str(decoded['ack']))
-          rtt = (.9 * rtt) + (.1 * sendBox[0])
+          rtt = (.8 * rtt) + (.2 * sendBox[0])
           sock.settimeout(rtt)
           sendBox.pop(0)
           outbox.pop(0)

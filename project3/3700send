@@ -27,13 +27,13 @@ outbox = []
 rtt = -1
 synSentAt = 0
 
-
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.settimeout(TIMEOUT)
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
+
 
 def send_syn():
     global synSentAt
@@ -43,7 +43,6 @@ def send_syn():
     else:
         synSentAt = time.time()
         log("[syn sent]")
-
 
 # Sends the given message to the given destination
 def send_msg_to_dest(msg, dest):
@@ -61,12 +60,16 @@ def send_next_packet():
 
   data = sys.stdin.read(DATA_SIZE)
   if (len(data) > 0):
-    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, 'syn': False})
+    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, "syn": False})
     SEQUENCE += len(data)
 
 
     send_msg_to_dest(msg, dest)
 
+    return True
+  elif len(outbox) != 0:
+    for message in outbox:
+      send_msg_to_dest(message, dest)
     return True
   else:
     return False
@@ -77,8 +80,6 @@ send_syn()
 # Now read in data, send packets
 while True:
   log("ABOUT TO SLEEP")
-
-
   result = sock.recvfrom(MSG_SIZE)
 
   if result:
@@ -90,7 +91,6 @@ while True:
           rtt = (time.time() - synSentAt)
           send_next_packet()
 
-
       # The sequence number for the oldest message in the outbox
       oldestMessage = json.loads(outbox[0])
       outboxStartingSeqNum = oldestMessage['sequence']
@@ -99,14 +99,15 @@ while True:
         outbox.pop(0)
         TIMEOUT = 30
 
+        # Try to send next packet; break if no more data
         if (not send_next_packet()):
-            break
-
+          break
 
       # If there is an ack with a different sequence number
-      else:
-        log("[recv ack] " + str(decoded['ack']))
-        for message in outbox:
+      elif (decoded['ack']):
+          log("[recv ack] " + str(decoded['ack']))
+
+          for message in outbox:
           send_msg_to_dest(message, dest)
 
 

@@ -69,11 +69,10 @@ while True:
 
 
       # Send back an ack to the sender
-      if sequenceToSend:
-          msg = json.dumps({"ack": sequenceToSend})
-          log("ABOUT TO SEND " + msg)
-          if sock.sendto(msg, addr) < len(msg):
-              log("[error] unable to fully send packet")
+      msg = json.dumps({"ack": sequenceToSend})
+      log("ABOUT TO SEND " + msg)
+      if sock.sendto(msg, addr) < len(msg):
+        log("[error] unable to fully send packet")
 
     except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")

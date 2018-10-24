@@ -13,7 +13,7 @@ import json
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
-MSG_SIZE = 1500
+MSG_SIZE = 1400
 TIMEOUT = 30
 
 # Bind to localhost and an ephemeral port
@@ -45,9 +45,9 @@ while True:
       decoded = json.loads(data)
 
       sequenceToSend = False
-      if(decoded['syn']):
+      if(decoded['syn'] is True):
           log("[syn recieved]")
-          msg = json.dumps({"syn":True})
+          msg = json.dumps({"syn": True, "ack": "Not A Real Ack"})
           sock.sendto(msg, addr)
 
       # If the EOF flag is set, exit
@@ -66,13 +66,17 @@ while True:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
             SEQUENCE += len(decoded['data'])
             sys.stdout.write(decoded['data'])
+            log(str(sequenceToSend))
 
 
-      # Send back an ack to the sender
-      msg = json.dumps({"ack": sequenceToSend})
-      log("ABOUT TO SEND " + msg)
-      if sock.sendto(msg, addr) < len(msg):
-        log("[error] unable to fully send packet")
+      if (sequenceToSend is not False):
+        # Send back an ack to the sender
+        msg = json.dumps({"ack": sequenceToSend, "syn": False})
+        log("ABOUT TO SEND " + msg)
+        if sock.sendto(msg, addr) < len(msg):
+          log("[error] unable to fully send packet")
+        else:
+          log("[recv sent packet]")
 
     except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")

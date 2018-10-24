@@ -83,4 +83,3 @@ while True:
       raise e
   else:
     log("[error] timeout")
-    TIMEOUT = TIMEOUT * 2

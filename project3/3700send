@@ -14,6 +14,7 @@ MSG_SIZE = 1400
 DATA_SIZE = 1000
 TIMEOUT = 30
 SEQUENCE = 0
+WINDOW_SIZE = 20
 
 # Bind to localhost and an ephemeral port
 IP_PORT = sys.argv[1]
@@ -23,6 +24,12 @@ dest = (UDP_IP, UDP_PORT)
 
 #Outbox for unacked messages
 outbox = []
+sendBox = []
+
+#Number of packets in a row we have successfully sent/acked
+inARow = 0
+
+
 
 rtt = -1
 synSentAt = 0
@@ -46,24 +53,25 @@ def send_syn():
 
 # Sends the given message to the given destination
 def send_msg_to_dest(msg, dest):
-  outbox.append(msg)
   msgJson = json.loads(msg)
   seqNum = msgJson['sequence']
   datalen = len(msgJson['data'])
   if sock.sendto(msg, dest) < len(msg):
     log("[error] unable to fully send packet")
   else:
+    sendBox.append(time.time())
     log("[send data] " + str(seqNum) + " (" + str(datalen) + ")")
 
 def send_next_packet():
   global SEQUENCE
 
   data = sys.stdin.read(DATA_SIZE)
-  if (len(data) > 0 and len(outbox) < 10):
+  if (len(data) > 0 and len(outbox) < WINDOW_SIZE):
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, "syn": False})
     SEQUENCE += len(data)
 
 
+    outbox.append(msg)
     send_msg_to_dest(msg, dest)
 
     return True
@@ -82,6 +90,10 @@ while True:
     result = sock.recvfrom(MSG_SIZE)
   except (socket.timeout):
     log("[recv timeout]")
+    rtt = .9 * rtt
+    sock.settimeout(rtt)
+    WINDOW_SIZE = 20
+    inARow = 0
     for message in outbox:
       send_msg_to_dest(message, dest)
 
@@ -92,19 +104,23 @@ while True:
 
       if (decoded['syn']):
           log("[recv syn]")
-          rtt = (time.time() - synSentAt)
+          rtt =  2 *(time.time() - synSentAt)
           send_next_packet()
 
-          #sock.settimeout(2*rtt)
+          sock.settimeout(rtt)
       else:
 
         # The sequence number for the oldest message in the outbox
         oldestMessage = json.loads(outbox[0])
         outboxStartingSeqNum = oldestMessage['sequence']
         if decoded['ack'] == outboxStartingSeqNum:
+          inARow = inARow + 1
+          WINDOW_SIZE = WINDOW_SIZE + inARow
           log("[recv ack] " + str(decoded['ack']))
+          rtt = (.9 * rtt) + (.1 * sendBox[0])
+          sock.settimeout(rtt)
+          sendBox.pop(0)
           outbox.pop(0)
-          TIMEOUT = 30
 
           # Try to send next packet; break if no more data
           if (not send_next_packet()):
@@ -114,8 +130,12 @@ while True:
         elif (decoded['ack']):
             log("[recv ack diff seq number] " + str(decoded['ack']))
 
-            #for message in outbox:
-            #  send_msg_to_dest(message, dest)
+            count = 0
+            for message in outbox:
+              send_msg_to_dest(message, dest)
+              sendBox[count] = time.time()
+              count = count + 1
+
     except Exception as e:
       log("error: " + str(e.message) + str(e.args))
 

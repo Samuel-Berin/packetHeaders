@@ -36,12 +36,12 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_syn():
-    msg = json.dumps{"syn": True}
+    msg = json.dumps(){"syn": True})
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
     else:
         synSentAt = time.time()
-        log("[syn sent]"")
+        log("[syn sent]")
 
 
 # Sends the given message to the given destination

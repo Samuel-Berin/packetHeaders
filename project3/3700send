@@ -36,6 +36,7 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_syn():
+    global synSentAt
     msg = json.dumps({"syn": True, "eof": False, "data": False})
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
@@ -60,7 +61,7 @@ def send_next_packet():
 
   data = sys.stdin.read(DATA_SIZE)
   if (len(data) > 0):
-    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
+    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, 'syn': False})
     SEQUENCE += len(data)
 
 

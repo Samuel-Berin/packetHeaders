@@ -44,6 +44,7 @@ while True:
     try:
       decoded = json.loads(data)
 
+      sequenceToSend = False
       if(decoded['syn']):
           log("[syn recieved]")
           msg = json.dumps({"syn":True})

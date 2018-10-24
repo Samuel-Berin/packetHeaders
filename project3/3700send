@@ -36,7 +36,7 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_syn():
-    msg = json.dumps({"syn": True})
+    msg = json.dumps({"syn": True, "eof": False, "data": False})
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
     else:
@@ -87,6 +87,7 @@ while True:
 
       if (decoded['syn']):
           rtt = (time.time() - synSentAt)
+          send_next_packet()
 
 
       # The sequence number for the oldest message in the outbox
@@ -97,7 +98,7 @@ while True:
         outbox.pop(0)
         TIMEOUT = 30
 
-        if (not send_next_packet())
+        if (not send_next_packet()):
             break
 
 

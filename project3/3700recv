@@ -47,7 +47,7 @@ while True:
       if(decoded['syn']):
           log("[syn recieved]")
           msg = json.dumps({"syn":True})
-          sock.sendto(msg, dest)
+          sock.sendto(msg, addr)
 
       # If the EOF flag is set, exit
       if (decoded['eof']):

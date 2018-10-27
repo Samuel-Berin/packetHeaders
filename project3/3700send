@@ -105,7 +105,7 @@ while True:
     try:
       decoded = json.loads(data)
 
-      if (decoded["syn"]):
+      if (decoded["syn"] is True):
           log("[recv syn]")
           rtt =  2 *(time.time() - synSentAt)
           send_next_packet()
@@ -147,7 +147,7 @@ while True:
             log("[recv ack diff seq number] " + str(decoded['ack']))
 
             waiting.append(decoded)       #ADDED, COMMENTED OUT BELOW
-            for 
+            for
             count = 0
             for message in outbox:
               send_msg_to_dest(message, dest)
@@ -170,12 +170,3 @@ while True:
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False, "syn": False, "snack": False}), dest)
 sys.exit(0)
-
-
-
-
-
-
-
-
-

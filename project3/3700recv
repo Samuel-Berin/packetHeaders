@@ -24,7 +24,11 @@ SEQUENCE = 0
 # The last sequence number seen
 SEQUENCE = 0
 
+# The packets received, unordered.
 inbox = []
+
+# Seen sequence numbers
+seen = []
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -35,12 +39,15 @@ sock.settimeout(TIMEOUT)
 UDP_PORT = sock.getsockname()[1]
 log("[bound] " + str(UDP_PORT))
 
-def send_ack(packet):
+def send_ack(packet, snack): #ADDED: snack as a parameter, T/F
   global SEQUENCE
-  log("[recv data] " + str(packet['sequence']) + " (" + str(len(packet['data'])) + ") ACCEPTED (in-order)")
-  SEQUENCE += len(decoded['data'])
-  sys.stdout.write(decoded['data'])
-  msg = json.dumps({"ack": packet['sequence'], "syn": False})
+  log("[recv data] " + str(packet["sequence"]) + " (" + str(len(packet['data'])) + ") ACCEPTED (in-order)")
+  SEQUENCE += len(decoded["data"])
+  sys.stdout.write(decoded["data"])
+  if snack:         #ADDED
+    msg = json.dumps({"ack": False, "syn": False, "snack": packet["sequence"]})
+  else:
+    msg = json.dumps({"ack": packet["sequence"], "syn": False, "snack": False})
   log("ABOUT TO SEND " + msg)
   if sock.sendto(msg, addr) < len(msg):
     log("[error] unable to fully send packet")
@@ -50,7 +57,6 @@ def send_ack(packet):
 # Now listen for packets!
 while True:
   result = sock.recvfrom(MSG_SIZE)
-
   # If nothing is ready, we hit the timeout
   if result:
     (data, addr) = result
@@ -58,36 +64,42 @@ while True:
     try:
       decoded = json.loads(data)
 
-      if(decoded['syn'] is True):
+      if (decoded["syn"] is True):
           log("[syn recieved]")
-          msg = json.dumps({"syn": True, "ack": "Not A Real Ack"})
+          msg = json.dumps({"syn": True, "ack": "Not A Real Ack", "snack": False})
           sock.sendto(msg, addr)
 
+      #ADDED
+      if decoded["sequence"] in seen:
+        continue
+
       # If the EOF flag is set, exit
-      if (decoded['eof']):
+      if (decoded["eof"]):
         log("[completed]")
         sys.exit(0)
 
       # If there is data, we accept it and print it out
-      if (decoded['data']):
-        # If we receive data, we assume it's in-order
-        # You will need to do much more here
-
+      if (decoded["data"]):
         # If the packet is the next packet we expect
-        if decoded['sequence'] == SEQUENCE:
+        if decoded["sequence"] == SEQUENCE:
+            send_ack(decoded, False)
 
-            send_ack(decoded)
             if (len(inbox) > 0):
               for msg in inbox:
-                if msg['sequence'] == SEQUENCE:
-                  send_ack(msg)
+                if msg["sequence"] == SEQUENCE:
+                  send_ack(msg, False)
 
 
         #The recieved packet is from later than what we expected,
         #Save it for later
-        elif decoded['sequence'] > SEQUENCE:
+        #Send a snack
+        elif decoded["sequence"] > SEQUENCE:
           inbox.append(decoded)
-          sorted(inbox, key=lambda x: x['sequence'])
+          sorted(inbox, key=lambda x: x["sequence"])
+
+      #ADDED
+      seen.append(decoded["sequence"])
+
 
 
     except (ValueError, KeyError, TypeError) as e:

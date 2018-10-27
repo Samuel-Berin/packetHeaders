@@ -24,7 +24,10 @@ dest = (UDP_IP, UDP_PORT)
 
 #Outbox for unacked messages
 outbox = []
+#The time the corresponding index in outbox was sent
 sendBox = []
+#Past packages whose ACKs we received, but were out of order. Stores the ack. #ADDED
+waiting = []
 
 #Number of packets in a row we have successfully sent/acked
 inARow = 0
@@ -44,7 +47,7 @@ def log(string):
 
 def send_syn():
     global synSentAt
-    msg = json.dumps({"syn": True, "eof": False, "data": False})
+    msg = json.dumps({"syn": True, "eof": False, "data": False, "snack": False, "sequence": False})
     if sock.sendto(msg, dest) < len(msg):
         log("[error] unable to fully send packet")
     else:
@@ -54,8 +57,8 @@ def send_syn():
 # Sends the given message to the given destination
 def send_msg_to_dest(msg, dest):
   msgJson = json.loads(msg)
-  seqNum = msgJson['sequence']
-  datalen = len(msgJson['data'])
+  seqNum = msgJson["sequence"]
+  datalen = len(msgJson["data"])
   if sock.sendto(msg, dest) < len(msg):
     log("[error] unable to fully send packet")
   else:
@@ -67,7 +70,7 @@ def send_next_packet():
 
   data = sys.stdin.read(DATA_SIZE)
   if (len(data) > 0 and len(outbox) < WINDOW_SIZE):
-    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, "syn": False})
+    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False, "syn": False, "snack": False})
     SEQUENCE += len(data)
 
 
@@ -88,6 +91,7 @@ while True:
   log("ABOUT TO SLEEP")
   try:
     result = sock.recvfrom(MSG_SIZE)
+    log("found")
   except (socket.timeout):
     log("[recv timeout]")
     rtt = .9 * rtt
@@ -96,27 +100,38 @@ while True:
     inARow = 0
     for message in outbox:
       send_msg_to_dest(message, dest)
-
   if result:
     (data, addr) = result
     try:
       decoded = json.loads(data)
 
-      if (decoded['syn']):
+      if (decoded["syn"]):
           log("[recv syn]")
           rtt =  2 *(time.time() - synSentAt)
           send_next_packet()
 
           sock.settimeout(rtt)
       else:
+        #ADDED
+        if len(waiting) > 0:
+          log("hm")
+          for curr_packet in waiting:
+            index = outbox.index(curr_packet)
+            if decoded["ack"] == json.loads(curr_packet)["sequence"]:
+              log("[recv ack] " + str(decoded["ack"]))
+              sendBox.remove(index)
+              outbox.remove(index)
+              waiting.remove(curr_packet)
+              break
+
 
         # The sequence number for the oldest message in the outbox
         oldestMessage = json.loads(outbox[0])
-        outboxStartingSeqNum = oldestMessage['sequence']
-        if decoded['ack'] == outboxStartingSeqNum:
+        outboxStartingSeqNum = oldestMessage["sequence"]
+        if decoded["ack"] == outboxStartingSeqNum:
           inARow = inARow + 1
           WINDOW_SIZE = WINDOW_SIZE + inARow
-          log("[recv ack] " + str(decoded['ack']))
+          log("[recv ack] " + str(decoded["ack"]))
           rtt = (.8 * rtt) + (.2 * sendBox[0])
           sock.settimeout(rtt)
           sendBox.pop(0)
@@ -125,20 +140,42 @@ while True:
           # Try to send next packet; break if no more data
           if (not send_next_packet()):
             break
-
+        #ADDED: commented this out. not needed bc if diff seq number received, handled with a snack
+        '''
         # If there is an ack with a different sequence number
         elif (decoded['ack']):
             log("[recv ack diff seq number] " + str(decoded['ack']))
 
+            waiting.append(decoded)       #ADDED, COMMENTED OUT BELOW
+            for 
             count = 0
             for message in outbox:
               send_msg_to_dest(message, dest)
               sendBox[count] = time.time()
               count = count + 1
+        '''
+        if (decoded["snack"]):                                    #ADDED: to handle snacks. Removes them from the lists.
+          log("[found me a snack] " + str(decoded["snack"]))
+          out_index = outbox.index(decoded["snack"])
+          outbox.remove(decoded)
+          sendBox.remove(out_index)
+          log("[recv ack] " + str(decoded["snack"]))
+          send_msg_to_dest(message, dest)
+          waiting.append(decoded)
+
 
     except Exception as e:
       log("error: " + str(e.message) + str(e.args))
 
 
-sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False, "syn": False}), dest)
+sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False, "syn": False, "snack": False}), dest)
 sys.exit(0)
+
+
+
+
+
+
+
+
+

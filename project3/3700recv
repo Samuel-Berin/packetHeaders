@@ -21,8 +21,6 @@ UDP_IP = "127.0.0.1"
 UDP_PORT = 0
 SEQUENCE = 0
 
-# The last sequence number seen
-SEQUENCE = 0
 
 # The packets received, unordered.
 inbox = []
@@ -80,6 +78,8 @@ while True:
 
       # If there is data, we accept it and print it out
       if (decoded["data"]):
+        log("SEQUENCE:" + SEQUENCE)
+        log("DECODED SEQUENCE:" + decoded["sequence"])
         # If the packet is the next packet we expect
         if decoded["sequence"] == SEQUENCE:
             send_ack(decoded, False)

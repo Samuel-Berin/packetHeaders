@@ -12,7 +12,7 @@ import json
 
 MSG_SIZE = 1400
 DATA_SIZE = 1000
-TIMEOUT = 30
+TIMEOUT = 2
 SEQUENCE = 0
 WINDOW_SIZE = 20
 
@@ -96,14 +96,12 @@ while True:
         send_syn()
 
     else:
-        rtt = .9 * rtt
+        rtt = .8 * rtt
         sock.settimeout(rtt)
         WINDOW_SIZE = 20
         inARow = 0
         for message in outbox:
           send_msg_to_dest(message, dest)
-
-
 
 
   if result:

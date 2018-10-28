@@ -14,7 +14,7 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 MSG_SIZE = 1400
-TIMEOUT = 3
+TIMEOUT = 30
 
 # Bind to localhost and an ephemeral port
 UDP_IP = "127.0.0.1"
@@ -22,7 +22,6 @@ UDP_PORT = 0
 SEQUENCE = 0
 
 inbox = []
-lastAck = None
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -53,13 +52,7 @@ def send_ack(seqNum):
 
 # Now listen for packets!
 while True:
-
-  try:
-      result = sock.recvfrom(MSG_SIZE)
-  except socket.timeout:
-      if laskAck not None:
-          send_ack(lastAck)
-
+  result = sock.recvfrom(MSG_SIZE)
 
   # If nothing is ready, we hit the timeout
   if result:
@@ -88,7 +81,6 @@ while True:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
             SEQUENCE += len(decoded['data'])
             sys.stdout.write(decoded['data'])
-            laskAck = decoded['sequence']
             send_ack(decoded['sequence'])
 
             # Check to see if we have any packets
@@ -97,7 +89,6 @@ while True:
                     if SEQUENCE == msg['sequence']:
                         log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
                         sys.stdout.write(decoded['data'])
-                        laskAck = msg['sequence']
                         send_ack(msg['sequence'])
                         SEQUENCE += len(msg['data'])
                         inbox.remove(msg)

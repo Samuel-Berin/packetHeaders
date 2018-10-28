@@ -21,8 +21,7 @@ UDP_IP = "127.0.0.1"
 UDP_PORT = 0
 SEQUENCE = 0
 
-# The last sequence number seen
-SEQUENCE = 0
+inbox = []
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -32,6 +31,24 @@ sock.settimeout(TIMEOUT)
 # Get port we bound to
 UDP_PORT = sock.getsockname()[1]
 log("[bound] " + str(UDP_PORT))
+
+
+def send_snack(seqNum):
+    msg = json.dumps({"ack": False, "syn": False, "snack": seqNum})
+    log("ABOUT TO SEND " + msg)
+    if sock.sendto(msg, addr) < len(msg):
+      log("[error] unable to fully send packet")
+    else:
+      log("[recv sent packet]")
+
+def send_ack(seqNum):
+    msg = json.dumps({"ack": seqNum, "syn": False, "snack": False})
+    log("ABOUT TO SEND " + msg)
+    if sock.sendto(msg, addr) < len(msg):
+      log("[error] unable to fully send packet")
+    else:
+      log("[recv sent packet]")
+
 
 # Now listen for packets!
 while True:
@@ -59,24 +76,30 @@ while True:
       if (decoded['data']):
         # If we receive data, we assume it's in-order
         # You will need to do much more here
-
-        sequenceToSend = SEQUENCE
         # If the packet is the next packet we expect
         if decoded['sequence'] == SEQUENCE:
             log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
             SEQUENCE += len(decoded['data'])
             sys.stdout.write(decoded['data'])
-            log(str(sequenceToSend))
+            send_ack(decoded['sequence'])
+
+            # Check to see if we have any packets
+            if len(inbox) > 0:
+                for msg in inbox:
+                    if SEQUENCE == msg['sequence']:
+                        log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
+                        sys.stdout.write(decoded['data'])
+                        send_ack(msg['sequence'])
+                        SEQUENCE += len(msg['data'])
+                        inbox.remove(msg)
 
 
-      if (sequenceToSend is not False):
-        # Send back an ack to the sender
-        msg = json.dumps({"ack": sequenceToSend, "syn": False})
-        log("ABOUT TO SEND " + msg)
-        if sock.sendto(msg, addr) < len(msg):
-          log("[error] unable to fully send packet")
-        else:
-          log("[recv sent packet]")
+        # We got a later one, send SNACK and store it
+        if decoded['sequence'] > SEQUENCE:
+            inbox.append(decoded)
+            inbox.sort(key=lambda x: x['sequence'])
+            send_snack(decoded['sequence'])
+
 
     except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")

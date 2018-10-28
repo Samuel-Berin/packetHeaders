@@ -108,8 +108,16 @@ while True:
           send_next_packet()
 
           sock.settimeout(rtt)
-      else:
 
+      elif (decoded['snack']):
+          for msg in outbox:
+              seqVal = decoded['snack']
+              # If that sequence number is later, send everything before
+              if seqVal > msg['sequence']:
+                  send_msg_to_dest(msg)
+              elif seqVal == msg['sequence']:
+                  outbox.remove(msg)
+      else:
         # The sequence number for the oldest message in the outbox
         oldestMessage = json.loads(outbox[0])
         outboxStartingSeqNum = oldestMessage['sequence']

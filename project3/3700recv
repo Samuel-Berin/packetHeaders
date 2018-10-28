@@ -54,6 +54,7 @@ def send_ack(packet, snack): #ADDED: snack as a parameter, T/F
 
 # Now listen for packets!
 while True:
+  log(str(SEQUENCE))
   result = sock.recvfrom(MSG_SIZE)
   # If nothing is ready, we hit the timeout
   if result:
@@ -61,6 +62,8 @@ while True:
 
     try:
       decoded = json.loads(data)
+
+      log("decoded is:" + str(decoded))
 
       if (decoded["syn"] is True):
           log("[syn recieved]")

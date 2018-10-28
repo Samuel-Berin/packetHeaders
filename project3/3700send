@@ -90,12 +90,21 @@ while True:
     result = sock.recvfrom(MSG_SIZE)
   except (socket.timeout):
     log("[recv timeout]")
-    rtt = .9 * rtt
-    sock.settimeout(rtt)
-    WINDOW_SIZE = 20
-    inARow = 0
-    for message in outbox:
-      send_msg_to_dest(message, dest)
+
+    # Syn got dropped
+    if rtt == -1:
+        send_syn()
+
+    else:
+        rtt = .9 * rtt
+        sock.settimeout(rtt)
+        WINDOW_SIZE = 20
+        inARow = 0
+        for message in outbox:
+          send_msg_to_dest(message, dest)
+
+
+
 
   if result:
     (data, addr) = result

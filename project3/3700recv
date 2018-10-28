@@ -42,11 +42,11 @@ log("[bound] " + str(UDP_PORT))
 def send_ack(packet, snack): #ADDED: snack as a parameter, T/F
   global SEQUENCE
   log("[recv data] " + str(packet["sequence"]) + " (" + str(len(packet['data'])) + ") ACCEPTED (in-order)")
-  SEQUENCE += len(decoded["data"])
   sys.stdout.write(decoded["data"])
   if snack:         #ADDED
     msg = json.dumps({"ack": False, "syn": False, "snack": packet["sequence"]})
   else:
+    SEQUENCE += len(decoded["data"])
     msg = json.dumps({"ack": packet["sequence"], "syn": False, "snack": False})
   log("ABOUT TO SEND " + msg)
   if sock.sendto(msg, addr) < len(msg):
@@ -107,5 +107,3 @@ while True:
       raise e
   else:
     log("[error] timeout")
-
-

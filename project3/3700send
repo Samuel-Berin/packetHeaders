@@ -114,7 +114,6 @@ while True:
       else:
         #ADDED
         if len(waiting) > 0:
-          log("hm")
           for curr_packet in waiting:
             index = outbox.index(curr_packet)
             if decoded["ack"] == json.loads(curr_packet)["sequence"]:
